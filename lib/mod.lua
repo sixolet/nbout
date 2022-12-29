@@ -1,4 +1,6 @@
 local mod = require 'core/mods'
+local nb = require('nbout/lib/nb/lib/nb')
+
 
 local my_midi = {
     name="nb",
@@ -6,15 +8,25 @@ local my_midi = {
 }
 function my_midi:send(data) end
 function my_midi:note_on(note, vel, ch)
-    -- TOODO
+    if ch == 1 then
+        local p = params:lookup_param("nbout_chan_1"):get_player()
+        p:note_on(note, vel/127)
+    end
 end
 function my_midi:note_off(note, vel, ch)
-    -- TODO
+    if ch == 1 then
+        local p = params:lookup_param("nbout_chan_1"):get_player()
+        p:note_off(note)
+    end
 end
 function my_midi:pitchbend(val, ch)
     -- TODO
 end
 function my_midi:cc(cc, val, ch)
+    if ch == 1 and cc == 72 then
+        local p = params:lookup_param("nbout_chan_1"):get_player()
+        p:modulate(val/127)
+    end
 end
 function my_midi:key_pressure(note, val, ch) end
 function my_midi:channel_pressure(val, ch) end
@@ -45,6 +57,7 @@ meta_fake_midi.__index = function(t, key)
         for _, d in ipairs(t.real_midi.devices) do
             table.insert(ret, d)
         end
+
         table.insert(ret, {
             name="nb",
             port=17,
@@ -52,13 +65,32 @@ meta_fake_midi.__index = function(t, key)
         })
         return ret
     end
+    if key == 'connect' then
+        return function(idx)
+            if idx <= 16 then
+                return t.real_midi.connect(idx)
+            end
+            if idx == #t.real_midi.vports + 1 then
+                return my_midi
+            end
+            return nil
+        end
+    end
     return t.real_midi[key]
 end
 
-mod.hook.register("script_pre_init", "etc pre init", function()
+mod.hook.register("script_pre_init", "nbout pre init", function()
     midi = fake_midi
+    local old_init = init
+    nb:init()
+    init = function()
+        old_init()
+        params:add_separator("nbout")
+        nb:add_param("nbout_chan_1", "nb midi ch 1")
+        nb:add_player_params()
+    end
 end)
 
-mod.hook.register("script_post_cleanup", "etc post cleanup", function()
+mod.hook.register("script_post_cleanup", "nbout post cleanup", function()
     midi = fake_midi.real_midi
 end)
