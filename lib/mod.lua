@@ -54,15 +54,14 @@ meta_fake_midi.__index = function(t, key)
     end
     if key == 'devices' then
         local ret = {}
-        for _, d in ipairs(t.real_midi.devices) do
-            table.insert(ret, d)
+        for k, d in pairs(t.real_midi.devices) do
+            ret[k] = d
         end
-
-        table.insert(ret, {
+        ret[-1] = {
             name="nb",
             port=17,
             id=-1,
-        })
+        }
         return ret
     end
     if key == 'connect' then
