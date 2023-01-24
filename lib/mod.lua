@@ -66,6 +66,9 @@ meta_fake_midi.__index = function(t, key)
     end
     if key == 'connect' then
         return function(idx)
+            if idx == nil then
+                idx = 1
+            end
             if idx <= 16 then
                 return t.real_midi.connect(idx)
             end
