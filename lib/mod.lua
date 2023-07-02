@@ -11,14 +11,14 @@ function my_midi:send(data) end
 function my_midi:note_on(note, vel, ch)
     if ch == 1 then
         if not channel_is_set_up then
-            print("Refusing to access nbout_chan_1")
+            print("nbout received note_on before initialization")
             return
         end
         local p = params:lookup_param("nbout_chan_1"):get_player()
         -- some sequencers (e.g. jala) seem to send nil for vel.
         -- assume they want a default velocity
         if vel == nil then
-            vel = 127
+            vel = 80
         end
         p:note_on(note, vel/127)
     end
@@ -26,7 +26,7 @@ end
 function my_midi:note_off(note, vel, ch)
     if ch == 1 then
         if not channel_is_set_up then
-            print("Refusing to access nbout_chan_1")
+            print("nbout received note_on before initialization")
             return
         end
         local p = params:lookup_param("nbout_chan_1"):get_player()
@@ -39,7 +39,7 @@ end
 function my_midi:cc(cc, val, ch)
     if ch == 1 and cc == 72 then
         if not channel_is_set_up then
-            print("Refusing to access nbout_chan_1")
+            print("nbout received note_on before initialization")
             return
         end
         local p = params:lookup_param("nbout_chan_1"):get_player()
@@ -113,12 +113,10 @@ mod.hook.register("script_pre_init", "nbout pre init", function()
         nb:add_param("nbout_chan_1", "nb midi ch 1")
         nb:add_player_params()
         channel_is_set_up = true
-        print("nbout_chan_1 is set up")
     end
 end)
 
 mod.hook.register("script_post_cleanup", "nbout post cleanup", function()
     channel_is_set_up = false
-    print("nbout_chan_1 is disabled")
     midi = fake_midi.real_midi
 end)
