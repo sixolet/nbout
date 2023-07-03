@@ -1,6 +1,7 @@
 local mod = require 'core/mods'
 local nb = require('nbout/lib/nb/lib/nb')
 
+local channel_is_set_up = false
 
 local my_midi = {
     name="nb",
@@ -9,12 +10,25 @@ local my_midi = {
 function my_midi:send(data) end
 function my_midi:note_on(note, vel, ch)
     if ch == 1 then
+        if not channel_is_set_up then
+            print("nbout received note_on before initialization")
+            return
+        end
         local p = params:lookup_param("nbout_chan_1"):get_player()
+        -- some sequencers (e.g. jala) seem to send nil for vel.
+        -- assume they want a default velocity
+        if vel == nil then
+            vel = 80
+        end
         p:note_on(note, vel/127)
     end
 end
 function my_midi:note_off(note, vel, ch)
     if ch == 1 then
+        if not channel_is_set_up then
+            print("nbout received note_on before initialization")
+            return
+        end
         local p = params:lookup_param("nbout_chan_1"):get_player()
         p:note_off(note)
     end
@@ -24,6 +38,10 @@ function my_midi:pitchbend(val, ch)
 end
 function my_midi:cc(cc, val, ch)
     if ch == 1 and cc == 72 then
+        if not channel_is_set_up then
+            print("nbout received note_on before initialization")
+            return
+        end
         local p = params:lookup_param("nbout_chan_1"):get_player()
         p:modulate(val/127)
     end
@@ -70,6 +88,10 @@ meta_fake_midi.__index = function(t, key)
                 idx = 1
             end
             if idx <= 16 then
+                if t.real_midi.vports[idx].name == "nb" then
+                  print("Connecting to nbout")
+                  return my_midi
+                end
                 return t.real_midi.connect(idx)
             end
             if idx == #t.real_midi.vports + 1 then
@@ -90,9 +112,11 @@ mod.hook.register("script_pre_init", "nbout pre init", function()
         params:add_separator("nbout")
         nb:add_param("nbout_chan_1", "nb midi ch 1")
         nb:add_player_params()
+        channel_is_set_up = true
     end
 end)
 
 mod.hook.register("script_post_cleanup", "nbout post cleanup", function()
+    channel_is_set_up = false
     midi = fake_midi.real_midi
 end)
